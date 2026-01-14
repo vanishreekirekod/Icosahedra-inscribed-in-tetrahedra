@@ -98,4 +98,119 @@ dd:=octahedron_from_tetrahedron([a,b,c]):
 ddd:=icosahedron(dd[1],dd[2],dd[3],[a,b,c,m,n]): ddd[2],ddd[3];
 
 
+####Automorphism Group
+InvPer := proc(a::list)
+local j,ai;
+ai := map(i->0,a):
+for j from 1 to nops(a) do
+  ai[a[j]] := j;
+od;
+ai;
+end:
+
+ProPer := proc(a::list, b::list)
+local c,j;
+c := map(x->0, [$1..nops(a)]):
+for j from 1 to nops(a) do
+  c[j] := a[b[j]];
+od;
+c;
+end:
+
+Bahn := proc(G::list, m, omega)
+local B, A,aa;
+B := {};
+A := {m};
+while A <> {} do
+  aa := A[1]; #print(op(map(g->omega(g,aa),G)),"next"):
+  A := {op(A),op(map(g->omega(g,aa),G))} minus {aa,op(B)}; #print("A",A):
+  B := B union {aa}; #print("B",B):
+od;
+B;
+end:
+
+Bahn_eq := proc(G::list, m, omega, eqproc)
+local B, A,aa, g,gaa,i,b;
+B := {};
+A := {m};
+while A <> {} do
+  aa := A[1]; #print(op(map(g->omega(g,aa),G)),"next"):
+  for g in G do
+    gaa := omega(g, aa):
+    i := 1;
+    while i <= nops(A) and not eqproc(gaa, A[i]) do
+      i := i+1;
+    od;
+    if i > nops(A) then
+      A := {op(A), gaa};
+    fi;
+  od;
+  A := A minus {aa};
+  for b in B do
+    i := 1;
+    while i <= nops(A) and not eqproc(b, A[i]) do
+      i := i+1;
+    od;
+    if i <= nops(A) then
+      A := subsop(i=NULL, A):
+    fi;
+  od;
+  B := B union {aa}; #print("B",B):
+od;
+B;
+end:
+
+
+OpPerMa := proc(P::list, M::listlist)
+convert(LinearAlgebra[SubMatrix](M, P, P), listlist):
+end:
+
+eq_evala := proc(M1, M2) 
+evalb({op(map(evala, map(op, convert(M1 - M2, listlist))))} = {0}): 
+end proc:
+
+
+eq_simplify := proc(M1, M2) 
+evalb({op(map(simplify, map(op, convert(M1 - M2, listlist))))} = {0}): 
+end proc:
+
+
+h1 := [12, 10, 9, 11, 7, 8, 5, 6, 3, 2, 4, 1];
+h2 := [ 1, 6, 3, 5, 4, 2, 11, 10, 9, 8, 7, 12 ]; 
+h3 := [ 9, 8, 12, 4, 5, 10, 7, 2, 1, 6, 11, 3 ]; 
+h4:= [ 4, 1, 5, 2, 8, 9, 6, 3, 7, 12, 10, 11 ];
+h5:=[ 2, 7, 3, 8, 4, 1, 11, 12, 9, 5, 6, 10 ];
+
+
+s := NewSurface():
+DefineEmbedding(s, ddd[1], "faces" = ddd[2], "vertices" = ddd[3]):
+coor := CoordinateMatrix(s, 1, "listlist" = true, "radical" = true):
+bary := Barycenter(s, 1):
+M := Matrix(map(i -> <i - bary>, coor)):
+gram := evala((Transpose(M)) . M):
+gram_list:=convert(gram,listlist);
+
+AutConditions := proc(g)
+local diff, conds, i, j;
+#Entrywise difference of Gram matrices
+diff := simplify(OpPerMa(g, gram_list) - gram_list);
+#Collect nonzero entry conditions
+conds := {};
+for i to nops(diff) do
+    for j to nops(diff[i]) do
+        if diff[i][j] <> 0 then
+            conds := conds union { diff[i][j]};
+        fi;
+    od;
+od;
+return conds;
+end:
+
+with(RegularChains):
+with(ChainTools): 	
+with(SemiAlgebraicSetTools):
+R:=PolynomialRing([a,b,c,m,n]);
+
+F:=[op(map(numer,AutConditions(h5))),a>0,b>0,c>0,m<>0,n<>0]; #to find values of a,b,c,m,n for permutation h5
+cad:=CylindricalAlgebraicDecompose(F,R,output='rootof');
 
